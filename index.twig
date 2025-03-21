@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Character encoding for proper text rendering -->
+    <meta charset="UTF-8">
+    <!-- Ensures proper rendering and touch zooming on mobile devices -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Sets the title of the web page -->
+    <title>Open Day Companion App</title>
+    <!-- Link to external stylesheet for styling the page -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Secure Include: Header -->
+    {% set allowed_includes = ['index1.twig', 'index2.twig'] %}
+    {% if 'index1.twig' in allowed_includes %}
+        {% include 'index1.twig' %}
+    {% endif %}
+
+    <!-- Main Content Area -->
+    <main class="site-main">
+        <!-- Hero Section with a Welcome Message -->
+        <section class="hero-section">
+            <h1>I am Wolfie!</h1>
+            <p>Your OpenDay Companion App</p>  {# Fixed unclosed <p> tag #}
+        </section>
+
+        <!-- Featured Sections: Highlights of the Open Day -->
+        <section class="featured-sections">
+            <div class="featured-books">
+                <!-- Campus Tour Card -->
+                <article class="book-card">
+                    <a href="campus_tour_details.php" class="book-card-link">
+                        <img src="images/campus.jpg" alt="Campus Tour">
+                        <h3>Campus Tour</h3>
+                        <p>Take a virtual tour of our campus and see what we have to offer.</p>
+                    </a>
+                </article>
+                
+                <!-- Event Schedules Card -->
+                <article class="book-card">
+                    <a href="event_schedules.php" class="book-card-link">
+                        <img src="images/application.png" alt="Event Schedules">
+                        <h3>Event Schedules</h3>
+                        <p>Check out the schedule for Open Day and plan your visit.</p>
+                    </a>
+                </article>
+                
+                <!-- University Life Card -->
+                <article class="book-card">
+                    <a href="university_life.php" class="book-card-link">
+                        <img src="images/uni-life.jpg" alt="University Life">
+                        <h3>University Life</h3>
+                        <p>A glimpse into our students' lifestyles.</p>
+                    </a>
+                </article>
+
+                <!-- FAQ Card -->
+                <article class="book-card">
+                    <a href="faq.php" class="book-card-link">
+                        <img src="images/advice.jpg" alt="FAQ">
+                        <h3>FAQ</h3>
+                        <p>View Frequently Asked Questions</p>
+                    </a>
+                </article>
+            </div>
+        </section>
+    </main>
+
+    <!-- Secure Include: Footer -->
+    {% if 'index2.twig' in allowed_includes %}
+        {% include 'index2.twig' %}
+    {% endif %}
+    
+    <!-- Secure JavaScript Loading -->
+    <script src="js/Ajax.js"></script>
+</body>
+</html>
