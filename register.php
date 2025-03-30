@@ -58,8 +58,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $stmt->close();
 
-    // 3. Generate Unique Registration Code
-    $registrationCode = bin2hex(random_bytes(32)); // Generate a secure random code
+    // 3. Generate Unique Registration Code in a loop and and checks whether it already exists in Database or not
+    do {
+    $registrationCode = bin2hex(random_bytes(32));
+    $stmt = $db->prepare("SELECT id FROM members WHERE registration_code = ?");
+    $stmt->bind_param("s", $registrationCode);
+    $stmt->execute();
+    $stmt->store_result();
+} while ($stmt->num_rows > 0);
+$stmt->close();
 
     // 4. Store User Data in Database
     $stmt = $db->prepare("INSERT INTO members (first_name, last_name, email, registration_code) VALUES (?, ?, ?, ?)");
