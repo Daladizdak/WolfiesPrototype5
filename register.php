@@ -1,50 +1,58 @@
 <?php
-session_start(); // Start the session
+session_start();
 
 // Include necessary files
 require_once 'vendor/autoload.php';
-require_once 'email_config.php'; // Load email settings
-
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
-require_once 'db.php';  // Database connection
+require_once 'db.php';
 
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
 
-// Initialize Twig
+// Twig setup
 $loader = new FilesystemLoader('templates');
 $twig = new Environment($loader);
 
+// Helper to build consistent template variables
+function buildTemplateVars($extras = []) {
+    $vars = $extras;
+
+    if (isset($_SESSION['delete_success'])) {
+        $vars['delete_success'] = $_SESSION['delete_success'];
+    }
+
+    return $vars;
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // 1. Validate Form Data
-    $firstName = trim($_POST['first_name']);
-    $lastName = trim($_POST['last_name']);
+    $fullName = trim($_POST['full_name']);
     $email = trim($_POST['email']);
+    $studyLevel = $_POST['study_level'];
+    $subjectInterest = $_POST['subject_interest'];
+    $numberGuests = $_POST['guests'];
 
-    // Initialize errors array
     $errors = [];
 
-    // --- Validation logic (example) --- 
-    if (empty($firstName)) {
-        $errors['first_name'] = 'First name is required.';
+    // Validation
+    if (empty($fullName)) {
+        $errors['full_name'] = 'Full name is required.';
     }
-    if (empty($lastName)) {
-        $errors['last_name'] = 'Last name is required.';
-    }
+
     if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $errors['email'] = 'Invalid email address.';
     }
 
-    // If there are errors, display the form with error messages
     if (!empty($errors)) {
-        echo $twig->render('register.twig', ['errors' => $errors, 'firstName' => $firstName, 'lastName' => $lastName, 'email' => $email]);
-        exit; // Stop further execution
+        echo $twig->render('register.twig', buildTemplateVars([
+            'errors' => $errors,
+            'fullName' => $fullName,
+            'email' => $email
+        ]));
+        unset($_SESSION['delete_success']);
+        exit;
     }
 
-    // 2. Check if Email Already Exists
+    // Check for duplicate email
     $stmt = $db->prepare("SELECT id FROM members WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -52,50 +60,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($stmt->num_rows > 0) {
         $errors['email'] = 'Email address already registered.';
-        echo $twig->render('register.twig', ['errors' => $errors, 'firstName' => $firstName, 'lastName' => $lastName, 'email' => $email]);
+        echo $twig->render('register.twig', buildTemplateVars([
+            'errors' => $errors,
+            'fullName' => $fullName,
+            'email' => $email
+        ]));
         $stmt->close();
+        unset($_SESSION['delete_success']);
         exit;
     }
     $stmt->close();
 
-    // 3. Generate Unique Registration Code in a loop and and checks whether it already exists in Database or not
-    do {
+    // Generate registration code
     $registrationCode = bin2hex(random_bytes(32));
-    $stmt = $db->prepare("SELECT id FROM members WHERE registration_code = ?");
-    $stmt->bind_param("s", $registrationCode);
-    $stmt->execute();
-    $stmt->store_result();
-} while ($stmt->num_rows > 0);
-$stmt->close();
 
-    // 4. Store User Data in Database
-    $stmt = $db->prepare("INSERT INTO members (first_name, last_name, email, registration_code) VALUES (?, ?, ?, ?)");
-    $stmt->bind_param("ssss", $firstName, $lastName, $email, $registrationCode);
+    // Store in DB
+    $stmt = $db->prepare("INSERT INTO members (full_name, email, study_level, subject_interest, number_of_guests, registration_code) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssss", $fullName, $email, $studyLevel, $subjectInterest, $numberGuests, $registrationCode);
 
     if ($stmt->execute()) {
-        // 5. Send Verification Email
-        $verificationLink = "verify.php?code=" . $registrationCode;  // we will have to create a verification link....work in progress
+        // Send email
+        $verificationLink = "verify.php?code=" . $registrationCode;
         $subject = "Open Day Registration Verification";
         $message = "Please click the following link to verify your registration: " . $verificationLink;
-        $headers = "From: noreply@yourdomain.com"; // Change to your domain
+        $headers = "From: noreply@yourdomain.com";
 
-        // ---  Mail sending logic (using mail() function) ---
         if (mail($email, $subject, $message, $headers)) {
-            $_SESSION['registration_email'] = $email; // Store email in session
-            header("Location: registration_success.php"); // Redirect to success page
+            $_SESSION['registration_email'] = $email;
+            header("Location: success.php");
             exit;
         } else {
-            // Handle email sending error (log it, display a message)
             echo "Error sending verification email.";
         }
     } else {
-        // Handle database error
         echo "Database error: " . $stmt->error;
     }
+
     $stmt->close();
     $db->close();
 } else {
-    // Display the registration form
-    echo $twig->render('register.twig');
+    // Show form
+    echo $twig->render('register.twig', buildTemplateVars());
+    unset($_SESSION['delete_success']);
 }
 ?>
