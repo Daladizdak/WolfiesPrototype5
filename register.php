@@ -100,8 +100,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt = $db->prepare("INSERT INTO members (full_name, email, study_level, subject_interest, number_of_guests, registration_code) VALUES (?, ?, ?, ?, ?, ?)");
     $stmt->bind_param("ssssss", $fullName, $email, $studyLevel, $subjectInterest, $numberGuests, $registrationCode);
 
+
+    //calls the function in email.php and sends the email to students
 if ($stmt->execute()) {
-    if (sendVerificationEmail($email, $fullName, $registrationCode)) {
+    if (verificationEmail($email, $fullName, $registrationCode)) {
         $_SESSION['registration_email'] = $email;
         header("Location: success.php");
         exit;
