@@ -4,6 +4,8 @@ session_start();
 // Include necessary files
 require_once 'vendor/autoload.php';
 require_once 'db.php';
+require_once 'email.php';
+
 
 use Twig\Environment;
 use Twig\Loader\FilesystemLoader;
@@ -11,6 +13,26 @@ use Twig\Loader\FilesystemLoader;
 // Twig setup
 $loader = new FilesystemLoader('templates');
 $twig = new Environment($loader);
+
+//  A function for email section that makes sure the code is unique by looping through the existing ones in db
+// Produces a shoter code
+function smallCode($db, $length = 10) {
+    do {
+        $randomBytes = random_bytes(5); 
+        $registrationCode = strtoupper(base_convert(bin2hex($randomBytes), 16, 36));
+
+        $stmt = $db->prepare("SELECT id FROM members WHERE registration_code = ?");
+        $stmt->bind_param("s", $registrationCode);
+        $stmt->execute();
+        $stmt->store_result();
+        $exists = $stmt->num_rows > 0;
+        $stmt->close();
+
+    } while ($exists);
+
+    return $registrationCode;
+}
+
 
 // Helper to build consistent template variables
 function buildTemplateVars($extras = []) {
@@ -72,27 +94,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->close();
 
     // Generate registration code
-    $registrationCode = bin2hex(random_bytes(32));
+    $registrationCode = smallCode($db);
 
     // Store in DB
     $stmt = $db->prepare("INSERT INTO members (full_name, email, study_level, subject_interest, number_of_guests, registration_code) VALUES (?, ?, ?, ?, ?, ?)");
     $stmt->bind_param("ssssss", $fullName, $email, $studyLevel, $subjectInterest, $numberGuests, $registrationCode);
 
-    if ($stmt->execute()) {
-        // Send email
-        $verificationLink = "verify.php?code=" . $registrationCode;
-        $subject = "Open Day Registration Verification";
-        $message = "Please click the following link to verify your registration: " . $verificationLink;
-        $headers = "From: noreply@yourdomain.com";
-
-        if (mail($email, $subject, $message, $headers)) {
-            $_SESSION['registration_email'] = $email;
-            header("Location: success.php");
-            exit;
-        } else {
-            echo "Error sending verification email.";
-        }
+if ($stmt->execute()) {
+    if (sendVerificationEmail($email, $fullName, $registrationCode)) {
+        $_SESSION['registration_email'] = $email;
+        header("Location: success.php");
+        exit;
     } else {
+        echo "Error sending verification email.";
+    }
+} else {
         echo "Database error: " . $stmt->error;
     }
 
