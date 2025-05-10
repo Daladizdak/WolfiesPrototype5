@@ -11,7 +11,7 @@ const dbConfig = {
   host: 'mi-linux.wlv.ac.uk',    
   user: '2378831', 
   password: 'shawn162024',
-  database: 'db'
+  database: 'db2378831'
 };
 
 // Dialogflow webhook function
