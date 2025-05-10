@@ -64,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors['email'] = 'Invalid email address.';
     }
 
+    // If there are errors, display the form with error messages
     if (!empty($errors)) {
         echo $twig->render('register.twig', buildTemplateVars([
             'errors' => $errors,
