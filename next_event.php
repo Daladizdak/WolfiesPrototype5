@@ -3,7 +3,7 @@
 header('Content-Type: application/json');
 
 // Database connection
-$host = 'mi-linux.wlv.ac.uk'; // or your host
+$host = 'mi-linux.wlv.ac.uk'; 
 $db   = 'db2378831';
 $user = '2378831';
 $pass = 'shawn162024';
