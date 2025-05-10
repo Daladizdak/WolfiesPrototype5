@@ -1,55 +1,51 @@
-'use strict';
+// Important libraries 
 const functions = require('firebase-functions');
 const { WebhookClient } = require('dialogflow-fulfillment');
-const mysql = require('mysql2/promise');
+const fetch = require('node-fetch');
 
-// Debug mode
-process.env.DEBUG = 'dialogflow:debug';
-
-// MySQL connection config
-const dbConfig = {
-  host: 'mi-linux.wlv.ac.uk',    
-  user: '2378831', 
-  password: 'shawn162024',
-  database: 'db2378831'
-};
-
-// Dialogflow webhook function
+// Export the main Cloud Function that handles Dialogflow webhook requests
 exports.dialogflowFirebaseFulfillment = functions.https.onRequest(async (request, response) => {
+
+  // Create a Dialogflow agent to manage the conversation flow
   const agent = new WebhookClient({ request, response });
 
+  //Handler for "GetNextEvent" intent in dialogflow
   async function nextEventHandler(agent) {
-    let connection;
     try {
-      connection = await mysql.createConnection(dbConfig);
-      const [rows] = await connection.execute(
-        `SELECT title, start_time 
-         FROM events 
-         WHERE start_time > NOW() 
-         ORDER BY start_time ASC 
-         LIMIT 1`
-      );
 
-      if (rows.length > 0) {
-        const event = rows[0];
-        const eventDate = new Date(event.start_time);
-        const formattedTime = eventDate.toLocaleString(); // You can format it as needed
-        agent.add(`The next event is "${event.title}" and it will start at ${formattedTime}.`);
-      } else {
-        agent.add('There are no upcoming events at the moment.');
-      }
+  // Fetches the data from an external API (next_event.php which returns the next event) 
+      const res = await fetch('https://mi-linux.wlv.ac.uk/~2337117/next_event.php');
+
+  // Read the raw response as text for debugging and parse it into JSON object 
+      const text = await res.text(); // read as raw text for now
+      console.log('Raw response:', text);
+      const event = JSON.parse(text);
+
+  // Format start_time (Column in database) into readable information
+      const date = new Date(event.start_time);
+      const options = { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric', 
+        hour: 'numeric', 
+        minute: '2-digit', 
+        hour12: true 
+      };
+      const formatted = date.toLocaleString('en-UK', options);
+
+
+   // Uses the fetched data and gives below respond to the user through Dialogflow
+      agent.add(`The next event is "${event.title}", and it starts on ${formatted}.`);
     } catch (error) {
-      console.error('Database error:', error);
-      agent.add('Sorry, I had trouble getting the event info.');
-    } finally {
-      if (connection) {
-        await connection.end();
-      }
+  // Error log for debugging
+      console.error('FETCH ERROR:', error);
+      agent.add(`Sorry, something went wrong. Error: ${error.message}`);
     }
   }
 
-  // Map intent names to handlers
-  let intentMap = new Map();
-  intentMap.set('NextEvent', nextEventHandler); // Change this to your actual Dialogflow intent name
+ // Associate the 'GetNextEvent' intent with the nextEventHandler function
+  const intentMap = new Map();
+  intentMap.set('GetNextEvent', nextEventHandler);
   agent.handleRequest(intentMap);
 });
