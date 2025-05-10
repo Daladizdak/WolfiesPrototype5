@@ -52,10 +52,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $studyLevel = $_POST['study_level'];
     $subjectInterest = $_POST['subject_interest'];
     $numberGuests = $_POST['guests'];
-
+// Initialize errors array
     $errors = [];
 
-    // Validation
+//Makes sure all the fields are filled out, otherwise displays an error and renders the page again    
     if (empty($fullName)) {
         $errors['full_name'] = 'Full name is required.';
     }
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Check for duplicate email
+    // Check for duplicate email, if the user has already registeres, they will get an error message
     $stmt = $db->prepare("SELECT id FROM members WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
