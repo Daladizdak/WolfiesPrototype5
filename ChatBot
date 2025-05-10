@@ -1,0 +1,55 @@
+'use strict';
+const functions = require('firebase-functions');
+const { WebhookClient } = require('dialogflow-fulfillment');
+const mysql = require('mysql2/promise');
+
+// Debug mode
+process.env.DEBUG = 'dialogflow:debug';
+
+// MySQL connection config
+const dbConfig = {
+  host: 'mi-linux.wlv.ac.uk',    
+  user: '2378831', 
+  password: 'shawn162024',
+  database: 'db'
+};
+
+// Dialogflow webhook function
+exports.dialogflowFirebaseFulfillment = functions.https.onRequest(async (request, response) => {
+  const agent = new WebhookClient({ request, response });
+
+  async function nextEventHandler(agent) {
+    let connection;
+    try {
+      connection = await mysql.createConnection(dbConfig);
+      const [rows] = await connection.execute(
+        `SELECT title, start_time 
+         FROM events 
+         WHERE start_time > NOW() 
+         ORDER BY start_time ASC 
+         LIMIT 1`
+      );
+
+      if (rows.length > 0) {
+        const event = rows[0];
+        const eventDate = new Date(event.start_time);
+        const formattedTime = eventDate.toLocaleString(); // You can format it as needed
+        agent.add(`The next event is "${event.title}" and it will start at ${formattedTime}.`);
+      } else {
+        agent.add('There are no upcoming events at the moment.');
+      }
+    } catch (error) {
+      console.error('Database error:', error);
+      agent.add('Sorry, I had trouble getting the event info.');
+    } finally {
+      if (connection) {
+        await connection.end();
+      }
+    }
+  }
+
+  // Map intent names to handlers
+  let intentMap = new Map();
+  intentMap.set('NextEvent', nextEventHandler); // Change this to your actual Dialogflow intent name
+  agent.handleRequest(intentMap);
+});
